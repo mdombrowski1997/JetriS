@@ -1,6 +1,3 @@
-// TODO: Kick
-// TODO: Disallow hold repeat
-// TODO: Lock delay
 // GLOBALS
 var START = [3, 0];
 var ROTATIONS = [
@@ -140,6 +137,7 @@ function render(canvas, grid, piece, next, ghost, hold, score) {
         ctx.lineTo(WIDTH, i*HEIGHT/SQUARES_Y);
         ctx.stroke();
     }
+
     // Other side of screen
     ctx.font="40px Arial";
     ctx.textAlign="center";
@@ -185,6 +183,9 @@ function render(canvas, grid, piece, next, ghost, hold, score) {
         ctx.fillText("Game Over", WIDTH, HEIGHT/2);
         ctx.fillText(score, WIDTH, HEIGHT/2 + 50);
     }
+
+    // FPS Counter
+    ++fps;
 }
 function clearLines(grid) {
     // Placeholder for now so addition of level is simpler later
@@ -302,7 +303,9 @@ next.x = (WIDTH + 53 - 45 + 303/2)*SQUARES_X/WIDTH;
 next.y = (75 + 50 + 75/2)*SQUARES_Y/HEIGHT;
 var ghost = newPiece(cur.id);
 var hold = null;
+var held = false;
 var score = 0;
+var fps = 0;
 // Keypress events
 window.addEventListener("keydown", function(event) {
     switch (event.key) {
@@ -338,6 +341,16 @@ window.addEventListener("keydown", function(event) {
             else {
                 cur.rotation -= 1;
             }
+            var tmp = [];
+            for (var i = 0; i < 4; ++i) {
+                tmp.push(ROTATIONS[cur.id][cur.rotation][i][0]);
+            }
+            while (cur.x + Math.max(...tmp)  >= SQUARES_X) {
+                --cur.x;
+            }
+            while (cur.x < 0) {
+                ++cur.x;
+            }
             break;
         // x rotates right
         case "x":
@@ -346,6 +359,16 @@ window.addEventListener("keydown", function(event) {
             }
             else {
                 cur.rotation += 1;
+            }
+            var tmp = [];
+            for (var i = 0; i < 4; ++i) {
+                tmp.push(ROTATIONS[cur.id][cur.rotation][i][0]);
+            }
+            while (cur.x + Math.max(...tmp)  >= SQUARES_X) {
+                --cur.x;
+            }
+            while (cur.x < 0) {
+                ++cur.x;
             }
             break;
         // Down Arrow soft drops
@@ -360,29 +383,39 @@ window.addEventListener("keydown", function(event) {
             break;
         // Shift holds piece
         case "Shift":
-            if (hold != null) {
-                var tmp = hold;
-                hold = cur;
-                cur = tmp;
-            }
-            else {
-                hold = cur;
-                cur = next;
-                next = bag.pop();
-                if (bag.length < 1) {
-                    bag = newBag();
+            if (!held) {
+                if (hold != null) {
+                    var tmp = hold;
+                    hold = cur;
+                    cur = tmp;
                 }
+                else {
+                    hold = cur;
+                    cur = next;
+                    next = bag.pop();
+                    next.x = (WIDTH + 53 - 45 + 303/2)*SQUARES_X/WIDTH;
+                    next.y = (75 + 50 + 75/2)*SQUARES_Y/HEIGHT;
+                    if (bag.length < 1) {
+                        bag = newBag();
+                    }
+                }
+                hold.x = (WIDTH + 53 - 45 + 303/2)*SQUARES_X/WIDTH;
+                hold.y = (325 + 50 + 75/2)*SQUARES_Y/HEIGHT;
+                cur.x = START[0];
+                cur.y = START[1];
+                ghost.id = cur.id;
+                held = true;
             }
-            hold.x = (WIDTH + 53 - 45 + 303/2)*SQUARES_X/WIDTH;
-            hold.y = (325 + 50 + 75/2)*SQUARES_Y/HEIGHT;
-            cur.x = START[0];
-            cur.y = START[1];
             break;
         // All else do nothing
         default:
             return;
     }
 });
+setInterval(function() {
+    console.log(fps);
+    fps = 0;
+}, 1000);
 
 // LOOP
 ;(function() {
@@ -400,6 +433,7 @@ window.addEventListener("keydown", function(event) {
             if (bag.length < 1) {
                 bag = newBag();
             }
+            held = false;
         }
         // TETRIS!!! (Hopefully)
         score += clearLines(board);
